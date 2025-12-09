@@ -1,24 +1,19 @@
 
 # choose first major peak in cases
-calibration_data <- combined_data %>%
+calibration_wide <- combined_data %>%
   filter(week_ending >= as.Date("2020-03-01") & 
            week_ending <= as.Date("2020-06-15")) %>%
   pivot_wider(names_from = measure, values_from = rate)
 
 # Create time variable (days since start)
 calibration_data <- calibration_data %>%
-  mutate(
-    time_days = as.numeric(week_ending - min(week_ending))
-  )
-
+  #days since start of period
+  mutate(time_days = as.numeric(week_ending - min(week_ending))) 
 print(calibration_data)
 
 # Visualize calibration period
-calibration_long <- calibration_data %>%
-  pivot_longer(cols = c(Cases, Deaths, Hospitalizations),
-               names_to = "measure", values_to = "rate")
 
-ggplot(calibration_long, aes(x = time_days, y = rate, color = measure)) +
+ggplot(calibration_data, aes(x = time_days, y = rate, color = measure)) +
   geom_line(linewidth = 1) +
   geom_point(size = 2) +
   facet_wrap(~measure, scales = "free_y", ncol = 1) +
@@ -29,3 +24,11 @@ ggplot(calibration_long, aes(x = time_days, y = rate, color = measure)) +
   theme_minimal()
 
 
+cdc_weekly <- calibration_wide %>%
+  mutate(week = floor(time_days / 7)) %>%
+  select(week, time_days, 
+         obs_I = Cases, 
+         obs_H = Hospitalizations, 
+         obs_D = Deaths)
+
+print(cdc_weekly)
