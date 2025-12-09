@@ -57,7 +57,7 @@ print(baseline_metrics)
 # Beta reduced by 30%
 parms_bpi <- parms
 parms_bpi["beta"] <- parms["beta"] * 0.7
-out_bpi <- as.data.frame(ode(startconds, times, seaihcrdmod, parms_bpi))
+out_bpi <- as.data.frame(ode(startconds, times, seaihcrdsmod, parms_bpi))
 out_bpi_scaled <- out_bpi
 out_bpi_scaled[,-1] <- out_bpi[,-1] * pop_size
 bpi_metrics <- hosp_metrics(out_bpi_scaled, hospital_capacity, icu_capacity, dt)
@@ -67,7 +67,7 @@ print(bpi_metrics)
 start_vax <- startconds
 start_vax["S"] <- startconds["S"] * (1 - 0.3)
 start_vax["R"] <- 0.3 * startconds["S"]  # vaccinate into R
-out_vax <- as.data.frame(ode(start_vax, times, seaihcrdmod, parms))
+out_vax <- as.data.frame(ode(start_vax, times, seaihcrdsmod, parms))
 out_vax_scaled <- out_vax
 out_vax_scaled[,-1] <- out_vax[,-1] * pop_size
 vax_metrics <- hosp_metrics(out_vax_scaled, hospital_capacity, icu_capacity, dt)
