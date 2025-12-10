@@ -35,14 +35,14 @@ seaihcrdsmod = function(t, startconds, parms) {
   Gamma = beta * (I + alpha * A) / N
   
   
-  dS = - S * Gamma - mu * S + omega* R
-  dE = S * Gamma - theta * E - mu * E
-  dA = (1 - rho) * theta * E - rA * A - mu * A
-  dI = rho * theta * E - (eta + rI + mu) * I
-  dH = eta * I - (kappa + rH + deltaH + mu) * H
-  dC = kappa * H - (rC + deltaC + mu) * C
-  dR = rA * A + rI * I + rH * H + rC * C - mu * R - omega* R
-  dD = deltaH * H + deltaC * C + mu * (S + E + A + I + H + C + R) 
+  dS = - S * Gamma  + omega* R #- mu * S
+  dE = S * Gamma - theta * E #- mu * E
+  dA = (1 - rho) * theta * E - rA * A #- mu * A
+  dI = rho * theta * E - (eta + rI) * I  #+mu*I
+  dH = eta * I - (kappa + rH + deltaH) * H #+ mu*H
+  dC = kappa * H - (rC + deltaC) * C #+ mu*C
+  dR = rA * A + rI * I + rH * H + rC * C  - omega* R #- mu * R
+  dD = deltaH * H + deltaC * C #+ mu * (S + E + A + I + H + C + R) 
   
   
   res = c(dS, dE, dA, dI, H = dH, C = dC, dR, dD)
