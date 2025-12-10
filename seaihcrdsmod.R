@@ -2,7 +2,7 @@
 require("deSolve")
 
 #model creation for 100 years
-seaihcrdsmod = function(t, startconds, parms) {
+seaihcrdmod = function(t, startconds, parms) {
   
   # Compartments
   S = startconds[1]
@@ -27,7 +27,6 @@ seaihcrdsmod = function(t, startconds, parms) {
   kappa = parms["kappa"]    # rate hospitalized -> ICU
   deltaH = parms["deltaH"]  # death rate hospitalized
   deltaC = parms["deltaC"]  # death rate ICU
-  omega  = parms["omega"]   # waning immunity rate
   mu = parms["mu"]          # natural death rate
   N = S + E + A + I + H + C + R # total population for force of infection
   
@@ -35,14 +34,14 @@ seaihcrdsmod = function(t, startconds, parms) {
   Gamma = beta * (I + alpha * A) / N
   
   
-  dS = - S * Gamma  + omega* R #- mu * S
-  dE = S * Gamma - theta * E #- mu * E
-  dA = (1 - rho) * theta * E - rA * A #- mu * A
-  dI = rho * theta * E - (eta + rI) * I  #+mu*I
-  dH = eta * I - (kappa + rH + deltaH) * H #+ mu*H
-  dC = kappa * H - (rC + deltaC) * C #+ mu*C
-  dR = rA * A + rI * I + rH * H + rC * C  - omega* R #- mu * R
-  dD = deltaH * H + deltaC * C #+ mu * (S + E + A + I + H + C + R) 
+  dS = - S * Gamma - mu * S
+  dE = S * Gamma - theta * E - mu * E
+  dA = (1 - rho) * theta * E - rA * A - mu * A
+  dI = rho * theta * E - (eta + rI) * I  +mu*I
+  dH = eta * I - (kappa + rH + deltaH) * H + mu*H
+  dC = kappa * H - (rC + deltaC) * C + mu*C
+  dR = rA * A + rI * I + rH * H + rC * C - mu * R
+  dD = deltaH * H + deltaC * C + mu * (S + E + A + I + H + C + R) 
   
   
   res = c(dS, dE, dA, dI, H = dH, C = dC, dR, dD)
@@ -58,34 +57,33 @@ parms <- c(
   rho   = 0.7, 
   rA    = 0.143,         
   rI    = 0.143,    
-  eta   = 0.0686, 
-  kappa = 0.102, 
+  eta   = 0.032, 
+  kappa = 0.217, 
   deltaH= 0.209,
-  deltaC= 0.343,
+  deltaC= 0.44,
   rH    = 0.196, 
-  rC    = 0.657,
-  omega = 0.00093,
-  mu    = 1/70     
+  rC    = 0.56,
+  mu    = 0.00002356164     
 )
 
 startconds = c(S = 0.999, E = 0.001, A = 0, I = 0, 
                H = 0, C = 0, R = 0, D = 0)
 
 
-out = as.data.frame(ode(startconds, times, seaihcrdsmod, parms))
+out = as.data.frame(ode(startconds, times, seaihcrdmod, parms))
 head(out)
 
 #simulate for 1 year in proportions
 times = seq(0, 365, by = 1/120)
 
-out_year = as.data.frame(ode(startconds, times, seaihcrdsmod, parms))
+out_year = as.data.frame(ode(startconds, times, seaihcrdmod, parms))
 head(out_year)
 
 #simulate for 1 year with population of 100,000
 
 # Population size
 pop_size <- 100000
-out_year_new = as.data.frame(ode(startconds, times, seaihcrdsmod, parms))
+out_year_new = as.data.frame(ode(startconds, times, seaihcrdmod, parms))
 head(out_year)
 out_scaled <- out_year_new
 out_scaled[, -1] <- out_year_new[, -1] * pop_size
