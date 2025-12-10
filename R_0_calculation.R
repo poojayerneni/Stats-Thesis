@@ -23,19 +23,18 @@ nextgenR0 <- function(Istates, Flist, Vlist, parameters, dfe){
 # Define parameters
 parameters <- c(
   beta = 0.75,
-  kappa = 0.497,      # Relative infectiousness of asymptomatics
+  alpha = 0.497,      # Relative infectiousness of asymptomatics
   theta = 0.167,
   rho = 0.7,
   gamma_A = 0.143,    # Recovery rate from A
   gamma_I = 0.143,    # Recovery rate from I
   gamma_H = 0.196,    # Recovery rate from H
-  gamma_C = 0.657,    # Recovery rate from C
-  eta = 0.0686,       # Symptomatic -> hospitalized rate
-  k = 0.102,          # Hospitalized -> ICU rate
+  gamma_C = 0.56,    # Recovery rate from C
+  eta = 0.032,       # Symptomatic -> hospitalized rate
+  kappa = 0.217,          # Hospitalized -> ICU rate
   delta_H = 0.209,    # Death rate in hospital
-  delta_C = 0.343,    # Death rate in ICU
-  omega = 0.000095,    # Waning immunity rate
-  mu = 1/70/365,      # Natural death rate
+  delta_C = 0.44,    # Death rate in ICU
+  mu = 0.00002356164,      # Natural death rate
   N = 1               # Total population at DFE
 )
 
@@ -59,7 +58,7 @@ Istates <- c("E", "A", "I")
 # Only E receives new infections: S * beta * (I + kappa * A) / N
 # A and I receive no NEW infections (only progressions from E)
 Flist <- list(
-  quote(S * beta * (I + kappa * A) / N),  # New infections into E --> COME BACK TO THIS
+  quote(S * beta * (I + alpha * A) / N),  # New infections into E --> COME BACK TO THIS
   quote(0),                                 # No new infections into A
   quote(0)                                  # No new infections into I
 )
@@ -85,7 +84,7 @@ cat("R0 calculated using nextgenR0 function:", R0, "\n")
 # OPTIONAL: verify with analytical formula
 R0_analytical <- parameters["beta"] * (
   parameters["rho"] / (parameters["gamma_I"] + parameters["eta"] + parameters["mu"]) + 
-    (1 - parameters["rho"]) * parameters["kappa"] / (parameters["gamma_A"] + parameters["mu"])
+    (1 - parameters["rho"]) * parameters["alpha"] / (parameters["gamma_A"] + parameters["mu"])
 )
 
 cat("R0 (Analytical formula):", R0_analytical, "\n")
