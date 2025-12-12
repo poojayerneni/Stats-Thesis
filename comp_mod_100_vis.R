@@ -57,6 +57,14 @@ ggplot(out, aes(x = time)) +
 
 ### FOR ONE YEAR USE OUT_YEAR
 #time series
+plot_data <- out_year %>% 
+  select(-Daily_New_Infections, -Cumulative_Infections)
+
+matplot(plot_data$time, plot_data[,-1], type = "l", lty = 1,
+        xlab = "Time (days)", ylab = "Proportion",
+        main = "SEAIHCRD Model over 1 Year")
+legend("right", legend = colnames(plot_data)[-1],
+       col = 1:length(colnames(plot_data)[-1]), lty = 1, cex = 0.6)
 matplot(out_year$time, out_year[,-1], type = "l", lty = 1,
         xlab = "Time (days)", ylab = "Proportion",
         main = "SEAIHCRD Model over 1 Year")
@@ -65,7 +73,7 @@ legend("right", legend = colnames(out_year)[-1],
 
 #panels of individual compartments
 
-long_yr <- melt(out_year, id = "time")
+long_yr <- melt(plot_data, id = "time")
 
 ggplot(long_yr, aes(x = time, y = value, colour = variable)) +
   geom_line(size = 1) +
@@ -76,6 +84,11 @@ ggplot(long_yr, aes(x = time, y = value, colour = variable)) +
   theme(legend.position = "none")
 
 #infections plot
+out_year$active_infections <- out_year$A + out_year$I  #infectious prevalence (A + I)
+peak_prevalence <- max(out_year$active_infections)
+avg_prevalence  <- mean(out_year$active_infections)
+peak_prevalence
+avg_prevalence
 ggplot(out_year, aes(x = time)) +
   geom_line(aes(y = A, color = "A")) +
   geom_line(aes(y = I, color = "I")) +
@@ -96,11 +109,6 @@ person_years = trapz(out_year$time, 1 - out$D) / 365  # integrate (alive fractio
 death_rate = final_deaths / person_years
 cat("Deaths per person-year:", death_rate, "\n")
 
-out_year$active_infections <- out_year$A + out_year$I  #infectious prevalence (A + I)
-peak_prevalence <- max(out_year$active_infections)
-avg_prevalence  <- mean(out_year$active_infections)
-peak_prevalence
-avg_prevalence
 
 library(ggplot2)
 
@@ -125,43 +133,72 @@ ggplot(daily, aes(x = day)) +
 
 ### FOR 1 YEAR AND 100,000 PPL USE OUT_SCALED
 # Find peak values and their timing
-peaks <- sapply(out_scaled[, -1], max)
-peak_times <- sapply(colnames(out_scaled)[-1], function(col) {
-  out_scaled$time[which.max(out_scaled[, col])]
-})
+# Find peaks for each compartment
+compartments_peak <- c("S", "E", "A", "I", "H", "C", "R", "D")
 
-# Create text with both value and time
-peak_text <- paste(names(peaks), ": ", 
-                   format(round(peaks), big.mark = ","), 
-                   " (day ", round(peak_times), ")", 
-                   sep = "")
-caption <- paste("Peak values -", paste(peak_text, collapse = " | "))
+peaks <- data.frame(
+  Compartment = compartments_peak,
+  Peak_Time = sapply(compartments_peak, function(x) out_year$time[which.max(out_year[[x]])]),
+  Peak_Value = sapply(compartments_peak, function(x) max(out_year[[x]]))
+)
+
+print(peaks)
+
+# With population scaling
+peaks_scaled <- peaks
+peaks_scaled$Peak_Value <- peaks$Peak_Value * pop_size
+print(peaks_scaled)
 
 # Time series plot
 matplot(out_scaled$time, out_scaled[,-1], type = "l", lty = 1,
         xlab = "Time (days)", ylab = "Number of People",
         main = "SEAIHCRD Model over 1 Year (N=100,000)",
-        yaxt = "n")
+        ylim = c(0, 100000), yaxt = "n")
+axis(2, at = seq(0, 100000, by = 20000), 
+     labels = format(seq(0, 100000, by = 20000), big.mark = ","))
+  
 
-# Add custom y-axis with comma formatting
-y_axis_vals <- axTicks(2)
-axis(2, at = y_axis_vals, labels = format(y_axis_vals, big.mark = ",", scientific = FALSE))
+# Add y-axis with ticks at peak values
+#axis(2, at = peaks_scaled$Peak_Value, labels = round(peaks_scaled$Peak_Value), 
+     #las = 2, cex.axis = 0.7)
 
-# Add vertical lines at peak times (optional - helps visualize)
-for(i in 1:length(peak_times)) {
-  abline(v = peak_times[i], col = i, lty = 3, lwd = 0.5)
+# Add points at peaks using peaks_scaled dataframe
+for(i in 1:nrow(peaks_scaled)) {
+  points(peaks_scaled$Peak_Time[i], peaks_scaled$Peak_Value[i], 
+         pch = 10, col = i, cex = 1.2)
 }
 
-legend("right", legend = colnames(out_scaled)[-1],
-       col = 1:8, lty = 1, cex = 0.6)
+# Add legend
+legend("right", legend = names(out_scaled)[-1], col = 1:8, lty = 1, lwd = 2, cex = 0.8)
 
-# Add caption below the plot
-mtext(caption, side = 1, line = 4, cex = 0.7, adj = 0)
 
-# Print peak values to console
-cat("\nPeak values for each compartment:\n")
-for (i in 1:length(peaks)) {
-  cat(sprintf("%s: %s individuals\n", names(peaks)[i], format(round(peaks[i]), big.mark = ",")))
+#new infections and deaths
+# First, calculate cumulative infections for PROPORTIONS
+out_year$Cumulative_Infections <- 1 - out_year$S  # Total who left S compartment
+
+# Then calculate daily new infections (proportions)
+out_year$Daily_New_Infections <- c(0, diff(out_year$Cumulative_Infections))
+
+# Now scale to population
+out_scaled$Cumulative_Infections <- out_year$Cumulative_Infections * pop_size
+out_scaled$Daily_New_Infections <- out_year$Daily_New_Infections * pop_size
+
+# Plot epidemic curve
+plot(out_scaled$time, out_scaled$Daily_New_Infections, 
+     type = "l", lwd = 2, col = "darkblue",
+     xlab = "Time (days)", ylab = "New Cases per Day",
+     main = "Epidemic Curve - Daily New Infections")
+
+# Daily new deaths
+out_scaled$Daily_New_Deaths <- c(0, diff(out_scaled$D))
+
+ggplot(out_scaled, aes(x = time, y = Daily_New_Deaths)) +
+  geom_line(linewidth = 1, color = "darkred") +
+  labs(title = "Daily Deaths",
+       x = "Time (days)", y = "Deaths per Day") +
+  theme_minimal()
+
+
   
 ###ONE YEAR FOR 350 FOR MSM COMPARISON
   # Compute cumulative infections and active infections (scaled to population)
@@ -183,4 +220,4 @@ for (i in 1:length(peaks)) {
       caption = "Blue bars = cumulative infections; Red line = active infections (A+I)"
     ) +
     theme_minimal(base_size = 13)
-}
+  
