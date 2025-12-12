@@ -50,6 +50,10 @@ hosp_metrics <- function(df, hosp_cap, icu_cap, dt) {
   )
 }
 
+#map variable names so ode functions are not confused
+ode_wrapper <- function(func) {function(t, state, parms) {
+    func(t, state, parms)}}
+
 # Baseline:
 baseline_metrics <- hosp_metrics(out_scaled, hospital_capacity, icu_capacity, dt)
 print(baseline_metrics)
@@ -57,7 +61,7 @@ print(baseline_metrics)
 # Beta reduced by 30%
 parms_bpi <- parms
 parms_bpi["beta"] <- parms["beta"] * 0.7
-out_bpi <- as.data.frame(ode(startconds, times, seaihcrdsmod, parms_bpi))
+out_bpi <- as.data.frame(ode(startconds, times, ode_wrapper(seaihcrdmod), parms_bpi))
 out_bpi_scaled <- out_bpi
 out_bpi_scaled[,-1] <- out_bpi[,-1] * pop_size
 bpi_metrics <- hosp_metrics(out_bpi_scaled, hospital_capacity, icu_capacity, dt)
@@ -67,7 +71,7 @@ print(bpi_metrics)
 start_vax <- startconds
 start_vax["S"] <- startconds["S"] * (1 - 0.3)
 start_vax["R"] <- 0.3 * startconds["S"]  # vaccinate into R
-out_vax <- as.data.frame(ode(start_vax, times, seaihcrdsmod, parms))
+out_vax <- as.data.frame(ode(start_vax, times, ode_wrapper(seaihcrdmod), parms))
 out_vax_scaled <- out_vax
 out_vax_scaled[,-1] <- out_vax[,-1] * pop_size
 vax_metrics <- hosp_metrics(out_vax_scaled, hospital_capacity, icu_capacity, dt)
@@ -169,7 +173,7 @@ table <- metrics_df %>%
   gt() %>%
   tab_header(
     title = "Healthcare System Impact Analysis",
-    subtitle = "SEAIHCRDS Model Scenarios (N=100,000)"
+    subtitle = "SEAIHCRD Model Scenarios (N=100,000)"
   ) %>%
   cols_label(
     Metric = "Metric",
@@ -256,4 +260,45 @@ comparison_table <- comparison_df %>%
     )
   )
 
+
 comparison_table
+
+
+#Line plot of admissions per day
+#calculate instantaneous admission rates from the model
+out_scaled$Hospital_Admission_Rate <- parms["eta"] * out_scaled$I
+out_scaled$ICU_Admission_Rate <- parms["kappa"] * out_scaled$H
+
+# Plot admission rates (people per day)
+ggplot(out_scaled, aes(x = time)) +
+  geom_line(aes(y = Hospital_Admission_Rate, color = "Hospital Admissions"), 
+            linewidth = 1) +
+  geom_line(aes(y = ICU_Admission_Rate, color = "ICU Admissions"), 
+            linewidth = 1) +
+  labs(title = "Daily Hospital and ICU Admission Rates",
+       x = "Time (days)", 
+       y = "Admissions per Day",
+       color = "Type") +
+  theme_minimal()
+
+# Calculate length of stay in hospitals
+# Calculate discharge rates from hospital
+# People leave H through: recovery (rH), moving to ICU (kappa), or death (deltaH)
+out_scaled$Hospital_Discharge_Rate <- (parms["rH"] + parms["kappa"] + parms["deltaH"]) * out_scaled$H
+
+# Calculate discharge rates from ICU
+# People leave C through: recovery (rC) or death (deltaC)
+out_scaled$ICU_Discharge_Rate <- (parms["rC"] + parms["deltaC"]) * out_scaled$C
+
+# Calculate from total patient-days / total admissions
+# Total patient-days in hospital
+total_hospital_patient_days <- sum(out_scaled$H * mean(diff(out_scaled$time)))
+
+# Total admissions to hospital (integrate admission rate over time)
+total_hospital_admissions <- sum(out_scaled$Hospital_Admission_Rate * mean(diff(out_scaled$time)))
+
+# Average length of stay in hospital
+avg_hospital_los <- total_hospital_patient_days / total_hospital_admissions
+
+cat("Average Hospital Length of Stay:\n")
+cat("", round(avg_hospital_los, 2), "days\n")
