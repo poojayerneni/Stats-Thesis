@@ -37,9 +37,9 @@ seaihcrdmod = function(t, startconds, parms) {
   dS = - S * Gamma - mu * S
   dE = S * Gamma - theta * E - mu * E
   dA = (1 - rho) * theta * E - rA * A - mu * A
-  dI = rho * theta * E - (eta + rI) * I  +mu*I
-  dH = eta * I - (kappa + rH + deltaH) * H + mu*H
-  dC = kappa * H - (rC + deltaC) * C + mu*C
+  dI = rho * theta * E - (eta + rI) * I  -mu*I
+  dH = eta * I - (kappa + rH + deltaH) * H - mu*H
+  dC = kappa * H - (rC + deltaC) * C - mu*C
   dR = rA * A + rI * I + rH * H + rC * C - mu * R
   dD = deltaH * H + deltaC * C + mu * (S + E + A + I + H + C + R) 
   
